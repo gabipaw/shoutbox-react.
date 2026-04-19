@@ -1,38 +1,31 @@
 import { useState, useEffect } from 'react';
-// 1. IMPORTUJEMY GNIAZDO
-import { io } from 'socket.io-client'; 
-
 import Header from './components/Header';
 import MessageForm from './components/MessageForm';
 import Login from './components/Login';
 import Message from './components/Message';
 
-// 2. PODŁĄCZAMY SIĘ DO SERWERA GŁÓWNEGO NAUCZYCIELA
-// (Jeśli zrobiłeś własny serwer, wpisz tu 'http://localhost:3000')
-const SOCKET_URL = 'https://apichat.m89.pl'; 
 const API_URL = 'https://apichat.m89.pl/api/messages';
-
-// Tworzymy połączenie przed komponentem (aby nie łączyło się od nowa przy każdej zmianie na ekranie)
-const socket = io(SOCKET_URL);
 
 function App() {
   const [wiadomosci, setWiadomosci] = useState([]);
   const [mojNick, setMojNick] = useState(localStorage.getItem('shoutboxNick') || '');
 
-  // --- ODBIERANIE WIADOMOŚCI (WEBSOCKET) ---
+  // --- POBIERANIE (GET) ---
+  const pobierzDane = async () => {
+    try {
+      const odpowiedz = await fetch(API_URL);
+      const dane = await odpowiedz.json();
+      setWiadomosci(dane);
+    } catch (error) { console.error(error); }
+  };
+
   useEffect(() => {
-    // 3. Nasłuchujemy na sygnał z serwera. Kiedy wpadnie, aktualizujemy Stan!
-    socket.on('chat_update', (noweWiadomosci) => {
-      setWiadomosci(noweWiadomosci);
-    });
+    pobierzDane();
+    const interval = setInterval(pobierzDane, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
-    // 4. Funkcja sprzątająca wyłącza nasłuch przy zamknięciu komponentu
-    return () => {
-      socket.off('chat_update');
-    };
-  }, []); // <- Pusta tablica: podłączamy się tylko raz
-
-  // --- WYSYŁANIE (HTTP POST) ---
+  // --- WYSYŁANIE (POST) ---
   const handleDodajWiadomosc = async (nowyTekst) => {
     try {
       await fetch(API_URL, {
@@ -40,11 +33,11 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author: mojNick, text: nowyTekst })
       });
-      // Nie musimy już ręcznie odświeżać! Serwer sam wypchnie nową tablicę!
+      pobierzDane(); // Natychmiastowe odświeżenie po wysłaniu
     } catch (error) { console.error(error); }
   };
 
-  // --- LAJKOWANIE (HTTP PATCH) ---
+  // --- NOWOŚĆ: LAJKOWANIE (PATCH) ---
   const handleLajkuj = async (id) => {
     try {
       await fetch(`${API_URL}/${id}/like`, {
@@ -52,14 +45,16 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ author: mojNick })
       });
+      pobierzDane(); // Odśwież widok
     } catch (error) { console.error(error); }
   };
 
-  // --- USUWANIE (HTTP DELETE) ---
+  // --- NOWOŚĆ: USUWANIE (DELETE) ---
   const handleUsun = async (id) => {
     if (!window.confirm("Czy na pewno chcesz usunąć tę wiadomość?")) return;
     try {
       await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      pobierzDane(); // Odśwież widok
     } catch (error) { console.error(error); }
   };
 
