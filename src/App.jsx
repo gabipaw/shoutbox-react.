@@ -100,7 +100,7 @@ function App() {
                 onDelete={handleUsun} 
               />
             ))}
-
+ {/* NOWOŚĆ 4: Pokaż napis TYLKO wtedy, gdy zmienna ktoPisze nie jest pusta */}
             {ktoPisze && (
               <div style={{ padding: '0 20px', fontSize: '0.85em', color: '#7f8c8d', fontStyle: 'italic', marginBottom: '5px' }}>
                 ✏️ {ktoPisze} pisze wiadomość...
@@ -109,7 +109,7 @@ function App() {
           </>
         )}
       </div>
-
+{/* NOWOŚĆ 5: Przekazujemy funkcję handleTyping do formularza */}
       <MessageForm onWyslij={handleDodajWiadomosc} onTyping={handleTyping} />
     </div>
   );
